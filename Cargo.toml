@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "mp1-code", 
+    "mp2-code",
+    "mp3-code",
+    "mp4-code"
+]
+resolver = "2"
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1

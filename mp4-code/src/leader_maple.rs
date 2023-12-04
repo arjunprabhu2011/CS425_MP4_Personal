@@ -137,7 +137,7 @@ impl LeaderMapleJuice {
             println!("LINEEEEE: {:?}", line);
             line_number += 1;
     
-            if line_number >= start_line && line_number <= end_line {
+            if (line_number >= start_line && line_number <= end_line) || (line_number == 1 && file_path.contains("csv"))  {
                 let line = line?;
                 bytes.extend_from_slice(line.as_bytes());
     

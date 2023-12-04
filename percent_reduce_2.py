@@ -1,7 +1,7 @@
 import sys
 
 def main(sdfs_intermediary_file):
-    with open(stage1_output_file, 'r') as file:
+    with open(sdfs_intermediary_file, 'r') as file:
         for line in file:
             detection, count, total = line.strip().split(',')
             percentage = (int(count) / int(total)) * 100 if total != '0' else 0

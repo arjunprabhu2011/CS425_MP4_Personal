@@ -6,11 +6,10 @@ def main(sdfs_intermediary_file):
     total_count = 0
     with open(intermediate_file, 'r') as file:
         for line in file:
-            key, value = line.strip().split(', ')
             if key != "Total":
-                detection_counts[key] += int(value)
+                detection_counts[key] += int(line.strip())
             else:
-                total_count += int(value)
+                total_count += int(line.strip())
     
     # Print the output for the next stage
     for detection, count in detection_counts.items():

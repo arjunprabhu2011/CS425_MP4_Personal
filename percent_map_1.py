@@ -22,6 +22,9 @@ def main(sql_file_path, csv_file_path):
         reader = csv.DictReader(file)
         for row in reader:
             if row['Interconne'] == interconne_type:
+                with open("tester.txt", 'w') as f:
+                    f.write("HERREEEEE")
+                    
                 detection_value = row['Detection_']
                 if detection_value != "":
                     print(f"{detection_value},1")

@@ -14,6 +14,7 @@ def main(sdfs_intermediary_file):
     
     # Print the output for the next stage
     for detection, count in detection_counts.items():
+        print(f"Total,{detection_counts["Total"]}")
         print(f"{detection},{count}")
 
 # def main():

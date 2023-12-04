@@ -280,7 +280,7 @@ pub fn send_tcp_message(machine_number: usize, message: &str, suspicion_active: 
         
                             let _ = stream.write(message.as_bytes());
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND TCP MESSAGE MP2");
                         }
                         println!("Successfully parsed socket address: {:?}", socket_address);
                     },

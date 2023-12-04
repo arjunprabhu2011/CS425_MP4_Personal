@@ -7,14 +7,20 @@ use mp3_code::{handle_get, handle_delete, wait_for_get_ack};
 use crate::client_mj::ClientMapleJuice;
 use crate::utils_messages_types::{JuiceHandlerRequest, MessageType, JuiceCompleteAck};
 use crate::utils_funcs::{send_serialized_message, get_ip_addr};
-use crate::utils_consts::MP4_PORT;
+use crate::utils_consts::MP4_PORT_LEADER;
 
+/**
+ * Represents a Client executing a juice exe or receiving an ack from the leader
+ */
 impl ClientMapleJuice {
+    /**
+     * Handle a request to execute the juice exe file
+     */
     pub fn handle_juice_leader_request(&mut self, juice_handler_request: JuiceHandlerRequest) -> Result<()> {
         let mut temp_output_file = File::create("output_file_juice.txt")?;
         for key in juice_handler_request.vec_of_keys.iter() {
             let sdfs_file_to_open = format!("{}_{}.txt", juice_handler_request.sdfs_intermediate_filename_prefix, key);
-            let local_intermediary_file = format!("local_{}.txt", sdfs_file_to_open);
+            let local_intermediary_file = format!("local_{}", sdfs_file_to_open);
 
             handle_get(sdfs_file_to_open.clone(), local_intermediary_file.clone(), (*self.machine_domain_name).clone(), self.sdfs_leader_domain_name.clone());
 
@@ -28,6 +34,8 @@ impl ClientMapleJuice {
                     .arg(local_intermediary_file.clone())
                     .output()
                     .expect("Failed to execute command");
+
+                println!("OUTPUT OF JUICE EXE: {:?}", output.stdout);
 
                 temp_output_file.write_all(&output.stdout);
 
@@ -63,7 +71,8 @@ impl ClientMapleJuice {
 
             match ip_addr {
                 Ok(ip) => {
-                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
+                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_LEADER);
+                    println!("HANDLE JUICE LEADER REQUEST ADDRESS: {}", address_str);
     
                     send_serialized_message(Arc::new(address_str), juice_ack);
                 },

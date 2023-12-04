@@ -158,7 +158,7 @@ impl ReplicaListener {
                                     }
                                 }
                             } else {
-                                println!("Failed to TCP send message");
+                                println!("Failed to TCP send message SEND ACK TO LEADER SDFS");
                             }
                         },
                         Err(e) => {
@@ -306,7 +306,7 @@ impl ReplicaListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND NODE FAILURE RESPONSE TO OTHER REPLICA");
                         }
                     },
                     Err(e) => {
@@ -397,7 +397,7 @@ impl ReplicaListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND SHARD TO OTHER REPLICA");
                         }
                     },
                     Err(e) => {
@@ -550,9 +550,41 @@ impl ReplicaListener {
     fn send_read_response_to_client(&self, res: ReadResponse, client_domain_name: String) -> Result<()> {
         let ip_addr = get_ip_addr(&client_domain_name);
 
-        match ip_addr {
+        match ip_addr.clone() {
             Ok(ip) => {
                 let address_str = format!("{}:8012", ip.to_string());
+                match address_str.parse::<SocketAddr>() {
+                    Ok(socket_address) => {
+                        if let Ok(mut stream) = TcpStream::connect(socket_address) {
+                            let response_wrapper = ResponseWrapper::Read(res.clone());
+                            let serialized_response = bincode::serialize(&response_wrapper);
+
+                            match serialized_response {
+                                Ok(ser_res) => {
+                                    println!("SENT READ RESPONSE BACK TO CLIENT (REPLICA NODE): {}", address_str);
+                                    stream.write(&ser_res);
+                                },
+                                Err(_) => {
+                                    eprintln!("Error in sending serialized response in send_read_response_to_client");
+                                }
+                            }
+                        } else {
+                            println!("Failed to TCP send message SEND READ RESPONSE TO CLIENT ONE");
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("Issue with parsing address in send_read_response_to_client");
+                    }
+                }
+            },
+            Err(e) => {
+                eprintln!("Issue with getting ip address in send_read_response_to_client");
+            }
+        }
+
+        match ip_addr {
+            Ok(ip) => {
+                let address_str = format!("{}:8025", ip.to_string());
                 match address_str.parse::<SocketAddr>() {
                     Ok(socket_address) => {
                         if let Ok(mut stream) = TcpStream::connect(socket_address) {
@@ -561,7 +593,7 @@ impl ReplicaListener {
 
                             match serialized_response {
                                 Ok(ser_res) => {
-                                    println!("SENT READ RESPONSE BACK TO CLIENT (REPLICA NODE)");
+                                    println!("SENT READ RESPONSE BACK TO BLOCKING GET (REPLICA NODE)");
                                     stream.write(&ser_res);
                                 },
                                 Err(_) => {
@@ -569,7 +601,7 @@ impl ReplicaListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND READ RESPONSE TO CLIENT TWO");
                         }
                     },
                     Err(e) => {
@@ -621,13 +653,13 @@ impl ReplicaListener {
     fn send_write_response_to_client(&self, res: WriteResponse, client_domain_name: String) -> Result<()> {
         let ip_addr = get_ip_addr(&client_domain_name);
 
-        match ip_addr {
+        match ip_addr.clone() {
             Ok(ip) => {
                 let address_str = format!("{}:8012", ip.to_string());
                 match address_str.parse::<SocketAddr>() {
                     Ok(socket_address) => {
                         if let Ok(mut stream) = TcpStream::connect(socket_address) {
-                            let response_wrapper = ResponseWrapper::Write(res);
+                            let response_wrapper = ResponseWrapper::Write(res.clone());
                             let serialized_response = bincode::serialize(&response_wrapper);
 
                             match serialized_response {
@@ -640,7 +672,39 @@ impl ReplicaListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND WRITE RESPONSE TO CLIENT ONE");
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("Issue with parsing address in send_write_response_to_client");
+                    }
+                }
+            },
+            Err(e) => {
+                eprintln!("Issue with getting ip address in send_write_response_to_client");
+            }
+        }
+
+        match ip_addr {
+            Ok(ip) => {
+                let address_str = format!("{}:8025", ip.to_string());
+                match address_str.parse::<SocketAddr>() {
+                    Ok(socket_address) => {
+                        if let Ok(mut stream) = TcpStream::connect(socket_address) {
+                            let response_wrapper = ResponseWrapper::Write(res);
+                            let serialized_response = bincode::serialize(&response_wrapper);
+
+                            match serialized_response {
+                                Ok(ser_res) => {
+                                    println!("SENT WRITE RESPONSE BACK TO BLOCKING PUT (REPLICA NODE): {}", address_str);
+                                    stream.write(&ser_res);
+                                },
+                                Err(_) => {
+                                    eprintln!("Error in sending serialized response in send_write_response_to_client");
+                                }
+                            }
+                        } else {
+                            println!("Failed to TCP send message SEND WRITE RESPONSE TO CLIENT TWO");
                         }
                     },
                     Err(e) => {
@@ -684,13 +748,13 @@ impl ReplicaListener {
     fn send_delete_response_to_client(&self, res: DeleteResponse, client_domain_name: String) -> Result<()> {
         let ip_addr = get_ip_addr(&client_domain_name);
 
-        match ip_addr {
+        match ip_addr.clone() {
             Ok(ip) => {
                 let address_str = format!("{}:8012", ip.to_string());
                 match address_str.parse::<SocketAddr>() {
                     Ok(socket_address) => {
                         if let Ok(mut stream) = TcpStream::connect(socket_address) {
-                            let response_wrapper = ResponseWrapper::Delete(res);
+                            let response_wrapper = ResponseWrapper::Delete(res.clone());
                             let serialized_response = bincode::serialize(&response_wrapper);
 
                             match serialized_response {
@@ -703,7 +767,7 @@ impl ReplicaListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND DELETE RESPONSE TO CLIENT");
                         }
                     },
                     Err(e) => {

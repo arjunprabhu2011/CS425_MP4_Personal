@@ -171,7 +171,7 @@ pub fn send_put_request_to_leader(req: WriteRequest, leader_domain_name: Arc<Mut
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message BROOOOO");
+                            println!("Failed to TCP send message SEND PUT REQUEST TO LEADER SDFS");
                         }
                     },
                     Err(_) => {
@@ -233,7 +233,7 @@ pub fn send_get_request_to_leader(req: ReadRequest, leader_domain_name: Arc<Mute
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND GET REQUEST TO LEADER SDFS");
                         }
                     },
                     Err(_) => {
@@ -290,7 +290,7 @@ pub fn send_delete_request_to_leader(req: DeleteRequest, leader_domain_name: Arc
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND DELETE REQUEST TO LEADER SDFS");
                         }
                     },
                     Err(_) => {
@@ -344,7 +344,7 @@ pub fn send_ls_request_to_leader(req: LsRequest, machine_domain_name: String, le
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND LS REQUEST TO LEADER");
                         }
                     },
                     Err(_) => {
@@ -385,7 +385,7 @@ pub fn wait_for_get_ack(machine_domain_name: &str) -> Result<bool> {
 
     match ip_addr {
         Ok(ip) => {
-            let address_str = format!("{}:8012", ip.to_string());
+            let address_str = format!("{}:8025", ip.to_string());
             match address_str.parse::<SocketAddr>() {
                 Ok(socket_addr) => {
                     let listener = TcpListener::bind(socket_addr)?;
@@ -399,6 +399,7 @@ pub fn wait_for_get_ack(machine_domain_name: &str) -> Result<bool> {
                             Ok((stream, _addr)) => {
                                 match is_get_ack(&stream) {
                                     Ok(true) => {
+                                        println!("RECEIVED GET WAITING ACK!");
                                         return Ok(true);
                                     },
                                     _ => {
@@ -442,7 +443,7 @@ pub fn wait_for_put_ack(machine_domain_name: &str) -> Result<bool> {
 
     match ip_addr {
         Ok(ip) => {
-            let address_str = format!("{}:8012", ip.to_string());
+            let address_str = format!("{}:8025", ip.to_string());
             match address_str.parse::<SocketAddr>() {
                 Ok(socket_addr) => {
                     let listener = TcpListener::bind(socket_addr)?;
@@ -456,7 +457,7 @@ pub fn wait_for_put_ack(machine_domain_name: &str) -> Result<bool> {
                             Ok((stream, _addr)) => {
                                 match is_put_ack(&stream) {
                                     Ok(true) => {
-                                        println!("RECEIVED PUT ACK!");
+                                        println!("RECEIVED PUT WAITING ACK!");
                                         return Ok(true);
                                     },
                                     _ => {

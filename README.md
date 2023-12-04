@@ -1,4 +1,4 @@
-# CS425_MP4_Personal
+# CS425-MP4
 Team: Akul Gupta, Arjun Prabhu
 
 
@@ -14,33 +14,37 @@ Team: Akul Gupta, Arjun Prabhu
 
 1. To use the main system, build with `make`.
 2. To clean up files, run `make clean`.  
+3. Run ./mp4 --current_machine=`machine_number_of_this_machine`
 
-### CLI Commands
+### Past Commands
 
-This CLI supports a set of commands for managing the membership list, handling node status, and file operations. Below is the list of available commands:
+This CLI supports a set of commands for managing the membership list, handling node status, and file operations from the past two MPs. Below is the list of available commands:
 
 - `list_mem`: Lists the membership of the system.
 - `list_self`: Lists the current machine's details in the membership.
 - `leave`: Initiates the current node's graceful leave from the membership.
 - `enable suspicion`: Activates the suspicion mechanism for failure detection.
 - `disable suspicion`: Deactivates the suspicion mechanism for failure detection.
-
-### File Operations
-
 - `put <localfilename> <sdfsfilename>`: Uploads a file from local storage to the distributed file system.
 - `get <sdfsfilename> <localfilename>`: Downloads a file from the distributed file system to local storage.
 - `delete <sdfsfilename>`: Deletes a file from the distributed file system.
 - `ls <sdfsfilename>`: Lists all nodes where the file is currently being stored.
 - `store`: Lists all files currently stored on the local node.
-
-### Multi-Node Read Operations
-
 - `multiread <sdfsfilename> <localfilename> <vm1> <vm2> ...`: Initiates a read operation from multiple nodes for the specified file.
+
+### New Commands
+- `maple <maple_exe> <sql_file> <num_maples> <sdfs_prefix> <source_data_file>`: Sends a maple request to execute maple_exe to the leader
+- `juice <juice_exe> <num_juices> <sdfs_prefix> <output_filename> <delete_input_flag> <hash_or_range_flag>`: Sends a juice request to execute juice_exe to the leader
 
 ### Notes
 
+- Replace `machine_number_of_this_machine` with the machine number of your local machine
 - Replace `<localfilename>` with the name of the file on your local machine.
 - Replace `<sdfsfilename>` with the name of the file in the distributed file system.
 - Replace `<vm1> <vm2> ...` with the actual VM identifiers you wish to read from.
+- Replace the maple and juice arguments with the corresponding data. For the flags, they are either 0 or 1
 - Ensure that the correct number of arguments is provided for each command.
 - If an invalid command or an incorrect number of arguments is entered, the system will respond with "Invalid command or incorrect number of arguments."
+
+
+

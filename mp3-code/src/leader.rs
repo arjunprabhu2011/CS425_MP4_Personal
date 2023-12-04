@@ -172,7 +172,7 @@ impl LeaderListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND NODE FAILURE REQUEST");
                         }
                     },
                     Err(e) => {
@@ -619,7 +619,7 @@ impl LeaderListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND REPLICA LIST RESPONSE");
                         }
                     },
                     Err(e) => {
@@ -853,9 +853,11 @@ impl LeaderListener {
         // println!("jskaflbjhdsbfhu");
         match req_ack.ack_type {
             AckType::Read => {
+                println!("LEADER SDFS RECEIVED READ ACK");
                 self.handle_read_ack(req_ack);
             },
             AckType::Write => {
+                println!("LEADER SDFS RECEIVED WRITE ACK");
                 self.handle_write_ack(req_ack);
             },
             AckType::Delete => {
@@ -980,7 +982,7 @@ impl LeaderListener {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND LS RESPONSE");
                         }
                     },
                     Err(e) => {

@@ -1,0 +1,1 @@
+SELECT ALL FROM TrafficSignalIntersections WHERE "Video,Radio"

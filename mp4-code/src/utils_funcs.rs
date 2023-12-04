@@ -8,7 +8,6 @@ use std::fs::{File, self};
 use std::io::{BufRead, BufReader, Result};
 
 use crate::utils_messages_types::MessageType;
-use crate::utils_consts::INTERMEDIATE_FILE_PATH;
 
 /**
  * Send a message via tcp to another address
@@ -47,6 +46,9 @@ pub fn get_ip_addr(domain: &str) -> core::result::Result<Arc<String>, String> {
     }
 }
 
+/**
+ * Send serialized MessageType to an ip address
+ */
 pub fn send_serialized_message(ip_to_send_to: Arc<String>, message: MessageType) {
     let serialized_handler_request = bincode::serialize(&message);
 
@@ -60,6 +62,9 @@ pub fn send_serialized_message(ip_to_send_to: Arc<String>, message: MessageType)
     }
 }
 
+/**
+ * Split a file into num_splits parts
+ */
 pub fn split_file(file_name: &str, num_splits: u32) -> Result<Vec<(u64, u64)>> {
     let file = File::open(file_name)?;
     let reader = BufReader::new(file);
@@ -84,18 +89,4 @@ pub fn split_file(file_name: &str, num_splits: u32) -> Result<Vec<(u64, u64)>> {
     }
 
     Ok(result)
-}
-
-pub fn wait_for_file_creation(file_path: &str, timeout: Duration) -> bool {
-    let start = Instant::now();
-    while start.elapsed() < timeout {
-        if fs::metadata(file_path).is_ok() {
-            // File exists
-            return true;
-        }
-
-        // Sleep for a short duration
-        thread::sleep(Duration::from_millis(100));
-    }
-    false
 }

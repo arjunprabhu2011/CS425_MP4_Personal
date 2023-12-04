@@ -1,73 +1,54 @@
-import pandas as pd
-import re
 import sys
-import math 
-
-def read_csv(file_path):
-    return pd.read_csv(file_path)
-
-def read_sql_query(file_path):
-    with open(file_path, 'r') as file:
-        return file.read()
+import re
+import csv
 
 def extract_regex_from_sql(sql_query):
-    # Extract regex from a query like "SELECT ALL FROM Dataset WHERE "regex""
-    match = re.search(r"WHERE\s+\"([^\"]+)\"", sql_query)
-    if match:
-        return match.group(1)
-    return ""
+    regex_match = re.search(r"WHERE\s+\"([^\"]+)\"", sql_query)
+    regex = regex_match.group(1) if regex_match else ""
 
-def filter_dataset(dataset, regex):
-    matching_rows = []
+    print(regex + "\n")
 
-    for index, row in dataset.iterrows():
-        # Convert the entire row to a single string
-        row_str = ','.join(row.astype(str))
-        
-        # Search for the regex pattern in the row string
-        if re.search(regex, row_str):
-            # If there is a match, add the original row to the list
-            matching_rows.append(row)
+    return regex
 
-    # Convert the list of matching rows
-    return pd.DataFrame(matching_rows)
+def filter_line(line, regex):
+    if re.search(regex, line):
+        return line
+    return None
 
-def split_into_chunks(dataset, chunk_size):
-    # Split dataset into chunks of `chunk_size` and return as a dictionary
-    chunks = {}
-    for i in range(0, len(dataset), chunk_size):
-        chunk_key = f"Chunk_{i // chunk_size + 1}"
-        chunk = dataset.iloc[i:i + chunk_size].reset_index(drop=True)
-        chunks[chunk_key] = chunk
-    return chunks
+def main(sql_file_path, csv_file_path):
+    try:
+        with open(sql_file_path, 'r') as sql_file:
+            sql_query = sql_file.read()
 
-def calculate_ideal_chunk_size(dataset, desired_chunks):
-    total_rows = len(dataset)
-    if total_rows == 0:
-        return 1 # Avoid division by zero
-    chunk_size = max(1, math.ceil(total_rows / desired_chunks))
-    return chunk_size
+            print("SQL: " + sql_query)
+    except FileNotFoundError:
+        print(f"Error: SQL file '{sql_file_path}' not found.", file=sys.stderr)
+        sys.exit(1)
 
-
-def main(csv_file, sql_query_file):
-    desired_chunks = 10
-    dataset = read_csv(csv_file)
-    sql_query = read_sql_query(sql_query_file)
+    print("SQL_2: " + sql_query)
     regex = extract_regex_from_sql(sql_query)
-    filtered_dataset = filter_dataset(dataset, regex)
-    
-    ideal_chunk_size = calculate_ideal_chunk_size(filtered_dataset, desired_chunks)
-    chunks = split_into_chunks(filtered_dataset, ideal_chunk_size)
 
-    # Print each chunk in CSV format
-    for key, chunk in chunks.items():
-        print(f"{key}:")
-        print(chunk.to_csv(index=False))
-        print()
+    try:
+        with open(csv_file_path, mode='r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            line_count = 0
+            for line in reader:
+                # Assuming the line is a list of values, you might want to join them into a single string
+                line_str = ','.join(line)
+                filtered_line = filter_line(line_str, regex)
+                if filtered_line:
+                    key = line_count % 100
+                    print(f"{key},{filtered_line}")
+                    line_count += 1
+    except FileNotFoundError:
+        print(f"Error: CSV file '{csv_file_path}' not found.", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python script.py <csv_file_path> <sql_query_file_path>")
+        print("Usage: python script.py <sql_file_path> <csv_file_path>", file=sys.stderr)
         sys.exit(1)
 
-    main(sys.argv[1], sys.argv[2])
+    sql_file_path = sys.argv[1]
+    csv_file_path = sys.argv[2]
+    main(sql_file_path, csv_file_path)

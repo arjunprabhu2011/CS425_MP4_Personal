@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, self};
 use std::io::{Result, BufReader, BufRead, Write};
 use std::sync::Arc;
 use std::thread;
@@ -7,12 +7,17 @@ use crate::leader_mj::LeaderMapleJuice;
 use mp3_code::{handle_get, wait_for_get_ack, handle_put, wait_for_put_ack};
 use crate::utils_messages_types::{MapleRequest, MapleHandlerRequest, MapleCompleteAck, MessageType, MJTask, TaskType, FullTaskCompleteAck};
 use crate::utils_funcs::{split_file, get_ip_addr, send_serialized_message};
-use crate::utils_consts::MP4_PORT;
+use crate::utils_consts::MP4_PORT_CLIENT;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 
+/**
+ * Struct representing the maple juice leader's maple actions
+ */
 impl LeaderMapleJuice {
-
+    /**
+     * Handle a maple request from a client
+     */
     pub fn handle_maple_request(&mut self, maple_request: MapleRequest) {
         println!("Received Maple Request: {:?}", maple_request);
 
@@ -62,7 +67,9 @@ impl LeaderMapleJuice {
                 exe_file: maple_request.maple_exe.clone()
             };
 
-            self.current_maplejuice_task = Some(mj_task);
+            if let Ok(mut task) = self.current_maplejuice_task.lock() {
+               *task = Some(mj_task);
+            }
 
             let mut index_to_pick = 0;
 
@@ -70,6 +77,7 @@ impl LeaderMapleJuice {
                 for index in val.iter() {
                     let start_index = index.0;
                     let end_index = index.1;
+                    println!("START_INDEX, END_INDEX: {}, {}", start_index, end_index);
 
                     let split_of_data = self.read_lines_range_as_bytes("temp_input_data.csv", start_index, end_index);
                     
@@ -83,7 +91,8 @@ impl LeaderMapleJuice {
                             start_line: start_index
                         });
 
-                        let address_str = format!("{}:{}", ip_destination.to_string(), MP4_PORT);
+                        let address_str = format!("{}:{}", ip_destination.to_string(), MP4_PORT_CLIENT);
+                        println!("HANDLE MAPLE CLIENT REQUEST ADDRESS (SEND): {}", address_str);
 
                         send_serialized_message(Arc::new(address_str), maple_handler_request.clone());
 
@@ -114,6 +123,9 @@ impl LeaderMapleJuice {
         }
     }
 
+    /**
+     * Read lines from the input data from start_line to end_line
+     */
     fn read_lines_range_as_bytes(&self, file_path: &str, start_line: u64, end_line: u64) -> Result<Vec<u8>> {
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
@@ -142,79 +154,87 @@ impl LeaderMapleJuice {
         Ok(bytes)
     }
 
+    /**
+     * Handle an ack saying the maple request was successful
+     */
     pub fn handle_maple_complete_ack(&mut self, maple_complete_ack: MapleCompleteAck) {
-        match self.current_maplejuice_task.clone() {
-            Some(mut task) => {
-                if let Some(index) = task.servers_left_to_complete_task.iter().position(|x| x == &maple_complete_ack.domain_name) {
-                    task.servers_left_to_complete_task.remove(index);
-
-                    if let Ok(mut map) = self.key_to_all_values_map.lock() {
-                        for (k, v) in maple_complete_ack.key_to_values_output.iter() {
-                            for val in v.iter() {
-                                map.entry((*k).clone())
-                                    .or_insert_with(Vec::new)
-                                    .push((*val).clone());
-                            }
-                        }
-                    }
-
-                    if task.servers_left_to_complete_task.is_empty() {
-                        if let Ok(map) = self.key_to_all_values_map.lock() {
-                            for (k,v) in map.iter() {
-                                let k_clone = k.clone();
-                                let v_clone = v.clone();
-                                let sdfs_intermediate_prefix_clone = maple_complete_ack.sdfs_intermediate_prefix.clone();
-                                let machine_domain_name_clone = self.machine_domain_name.clone();
-                                let sdfs_leader_domain_name_clone = self.sdfs_leader_domain_name.clone();
-
-                                if let Ok(mut pref_map) = self.sdfs_prefix_to_keys.lock() {
-                                    let entry = pref_map.entry(sdfs_intermediate_prefix_clone.clone())
-                                        .or_insert_with(Vec::new);
-                                    
-                                    if !entry.contains(&k_clone) {
-                                        entry.push(k_clone.clone());
+        if let Ok(mut mj_task) = self.current_maplejuice_task.lock() {
+            match mj_task.as_mut() {
+                Some(mut task) => {
+                    println!("SERVERS COMPLETE TASK BEFORE REMOVAL: {:?}", task.servers_left_to_complete_task);
+                    println!("MAPLE ACK DOMAIN NAME: {}", maple_complete_ack.domain_name);
+                    if let Ok(ip) = get_ip_addr(&maple_complete_ack.domain_name) {
+                        if let Some(index) = task.servers_left_to_complete_task.iter().position(|x| x == &*ip) {
+                            task.servers_left_to_complete_task.remove(index);
+                            println!("SERVERS STILL LEFT TO COMPLETE MAPLE HANDLER REQUEST: {:?}", task.servers_left_to_complete_task);
+        
+                            if let Ok(mut map) = self.key_to_all_values_map.lock() {
+                                for (k, v) in maple_complete_ack.key_to_values_output.iter() {
+                                    for val in v.iter() {
+                                        map.entry((*k).clone())
+                                            .or_insert_with(Vec::new)
+                                            .push((*val).clone());
                                     }
-                                } 
-
-                                let put_request_thread_handle = thread::spawn(move || {
-                                    let local_file_name = format!("leader_local_{}_{}.txt", sdfs_intermediate_prefix_clone, k_clone);
-                                    let output_file = OpenOptions::new()
-                                        .write(true)
-                                        .append(true) // Set to true to append data to the end of the file
-                                        .open(local_file_name.clone());
-
-                                    {
-                                        if let Ok(mut file) = output_file {
-                                            for value in v_clone.iter() {
-                                                file.write_all(value);
+                                }
+                            }
+        
+                            if task.servers_left_to_complete_task.is_empty() {
+                                if let Ok(map) = self.key_to_all_values_map.lock() {
+                                    for (k,v) in map.iter() {
+                                        let k_clone = k.clone();
+                                        let v_clone = v.clone();
+                                        let sdfs_intermediate_prefix_clone = maple_complete_ack.sdfs_intermediate_prefix.clone();
+                                        let machine_domain_name_clone = self.machine_domain_name.clone();
+                                        let sdfs_leader_domain_name_clone = self.sdfs_leader_domain_name.clone();
+        
+                                        if let Ok(mut pref_map) = self.sdfs_prefix_to_keys.lock() {
+                                            let entry = pref_map.entry(sdfs_intermediate_prefix_clone.clone())
+                                                .or_insert_with(Vec::new);
+                                            
+                                            if !entry.contains(&k_clone) {
+                                                entry.push(k_clone.clone());
                                             }
-                                        }
+                                        } 
+        
+                                        let put_request_thread_handle = thread::spawn(move || {
+                                            let local_file_name = format!("leader_local_{}_{}.txt", sdfs_intermediate_prefix_clone, k_clone);
+                                            let output_file = File::create(local_file_name.clone());
+        
+                                            {
+                                                if let Ok(mut file) = output_file {
+                                                    for value in v_clone.iter() {
+                                                        file.write_all(value);
+                                                    }
+                                                }
+                                            }
+        
+                                            let sdfs_file_name_for_key = format!("{}_{}.txt", sdfs_intermediate_prefix_clone, k_clone);
+        
+                                            handle_put(sdfs_file_name_for_key, local_file_name.clone(), (*machine_domain_name_clone).clone(), sdfs_leader_domain_name_clone);
+        
+                                            let put_ack_ret = wait_for_put_ack(&*machine_domain_name_clone);
+                                        });
                                     }
-
-                                    let sdfs_file_name_for_key = format!("{}_{}.txt", sdfs_intermediate_prefix_clone, k_clone);
-
-                                    handle_put(sdfs_file_name_for_key, local_file_name.clone(), (*machine_domain_name_clone).clone(), sdfs_leader_domain_name_clone);
-
-                                    let put_ack_ret = wait_for_put_ack(&*machine_domain_name_clone);
-                                });
+                                }
+        
+                                if let Ok(ip) = get_ip_addr(&task.original_client_domain_name) {
+                                    let full_task_complete_ack = MessageType::FullTaskCompleteAckType(FullTaskCompleteAck {
+                                        task_type: TaskType::Maple,
+                                        exe_file: maple_complete_ack.exe_file
+                                    });
+        
+                                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_CLIENT);
+                                    println!("SEND FULL ACK BACK TO CLIENT ADDRESS: {}", address_str);
+        
+                                    send_serialized_message(Arc::new(address_str), full_task_complete_ack);
+                                }
                             }
                         }
-
-                        if let Ok(ip) = get_ip_addr(&task.original_client_domain_name) {
-                            let full_task_complete_ack = MessageType::FullTaskCompleteAckType(FullTaskCompleteAck {
-                                task_type: TaskType::Maple,
-                                exe_file: maple_complete_ack.exe_file
-                            });
-
-                            let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
-
-                            send_serialized_message(Arc::new(address_str), full_task_complete_ack);
-                        }
                     }
+                },
+                None => {
+                    eprintln!("THE CURRENT TASK IS NOT INITIALIZED UPON RECEIPT OF A MAPLE ACK");
                 }
-            },
-            None => {
-                eprintln!("THE CURRENT TASK IS NOT INITIALIZED UPON RECEIPT OF A MAPLE ACK");
             }
         }
     }    

@@ -1,1 +1,1 @@
-SELECT ALL FROM Dataset WHERE "Video,Radio"
+SELECT ALL FROM test_data.csv WHERE "Video,Radio"

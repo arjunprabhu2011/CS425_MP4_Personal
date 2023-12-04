@@ -1,0 +1,3 @@
+SELECT ALL FROM test_join_dataset_one, test_join_dataset_two WHERE test_join_dataset_one.Name = test_join_dataset_two.Person
+Name
+Person

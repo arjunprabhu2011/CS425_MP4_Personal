@@ -119,7 +119,7 @@ fn main() {
     });
 
     let leader_mj_clone_name = Arc::clone(&leader_mj_name_arc);
-    let sdfs_leader_clone_name = Arc::clone(&leader_mj_name_arc);
+    let sdfs_leader_clone_name = Arc::clone(&sdfs_leader_name_arc);
     let client_mj = Arc::new(Mutex::new(ClientMapleJuice::new(Arc::new(domain_name.clone()), leader_mj_clone_name, sdfs_leader_clone_name)));
 
     let client_mj_clone = Arc::clone(&client_mj);
@@ -346,19 +346,19 @@ pub fn run_cli_mp4(membership_list: &Arc<Mutex<HashMap<(String, usize, SystemTim
 }
 
 /**
- * Initial Handling of put request
+ * Send Maple Request to Leader MJ
  */
 pub fn send_maple_request(machine_domain_name: Arc<String>, sdfs_intermediate_prefix: String, maple_executable: String, source_data_path: String, sql_path: String, number_maples: u16, leader_domain_name: Arc<Mutex<String>>, sdfs_leader_domain_name: Arc<Mutex<String>>) {
     let maple_request = MessageType::MapleRequestType(MapleRequest {
         original_client_domain_name: (*machine_domain_name).clone(),
         intermediate_prefix: sdfs_intermediate_prefix,
         maple_exe: maple_executable,
-        source_file: source_data_path.clone(),
+        source_file: format!("sdfs_{}",source_data_path.clone()),
         sql_file: sql_path,
         num_maples: number_maples
     });
 
-    handle_put(source_data_path.clone(), source_data_path, (*machine_domain_name).clone(), sdfs_leader_domain_name);
+    handle_put(format!("sdfs_{}",source_data_path.clone()), source_data_path, (*machine_domain_name).clone(), sdfs_leader_domain_name);
 
     let ret_put_ack = wait_for_put_ack(&machine_domain_name);
 
@@ -368,7 +368,9 @@ pub fn send_maple_request(machine_domain_name: Arc<String>, sdfs_intermediate_pr
     
             match ip_addr {
                 Ok(ip) => {
-                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
+                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_LEADER);
+
+                    println!("SENT MAPLE REQUEST TO LEADER ADDRESS: {}", address_str);
 
                     println!("SENT MAPLE REQUEST!");
     
@@ -383,7 +385,7 @@ pub fn send_maple_request(machine_domain_name: Arc<String>, sdfs_intermediate_pr
 }
 
 /**
- * Initial Handling of put request
+ * Send Juice Request to leader mj
  */
 pub fn send_juice_request(machine_domain_name: Arc<String>, sdfs_intermediate_prefix: String, juice_executable: String, sdfs_dest_file: String, number_juices: u16, delete_input_bool: u8, hash_range: u8, leader_maplejuice_domain_name: Arc<Mutex<String>>) {
     let juice_request = MessageType::JuiceRequestType(JuiceRequest {
@@ -401,7 +403,8 @@ pub fn send_juice_request(machine_domain_name: Arc<String>, sdfs_intermediate_pr
 
         match ip_addr {
             Ok(ip) => {
-                let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
+                let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_LEADER);
+                println!("SENT JUICE REQUEST TO LEADER ADDRESS: {}", address_str);
 
                 println!("SENT JUICE REQUEST!");
 

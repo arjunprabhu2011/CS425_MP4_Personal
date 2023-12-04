@@ -5,7 +5,7 @@ use std::thread;
 
 use crate::utils_messages_types::{MessageType, TaskType};
 use crate::utils_funcs::get_ip_addr;
-use crate::utils_consts::MP4_PORT;
+use crate::utils_consts::MP4_PORT_CLIENT;
 
 #[derive(Clone)]
 pub struct ClientMapleJuice {
@@ -41,11 +41,12 @@ impl ClientMapleJuice {
 
     fn listen_for_requests(&mut self) -> Result<()> {
         let ip_addr = get_ip_addr(&self.machine_domain_name);
+        println!("CLIENT MY IP ADDRESS: {}", self.machine_domain_name);
 
         match ip_addr {
             Ok(ip) => {
-                // TODO: CHANGE PORT
-                let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
+                let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_CLIENT);
+                println!("CLIENT LISTEN FOR REQUESTS ADDRESS: {}", address_str);
                 match address_str.parse::<SocketAddr>() {
                     Ok(socket_addr) => {
                         let listener = TcpListener::bind(socket_addr)?;

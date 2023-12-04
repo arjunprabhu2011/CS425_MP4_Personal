@@ -6,10 +6,16 @@ use std::sync::Arc;
 use crate::client_mj::ClientMapleJuice;
 use crate::utils_funcs::{send_serialized_message, get_ip_addr};
 use crate::utils_messages_types::{MapleHandlerRequest, MapleCompleteAck, MessageType};
-use crate::utils_consts::MP4_PORT;
+use crate::utils_consts::MP4_PORT_LEADER;
 use std::io::{BufRead, BufReader, Result, Write};
 
+/**
+ * Represents a Client executing a maple exe or receiving an ack from the leader
+ */
 impl ClientMapleJuice {
+    /**
+     * Handle a request to execute the maple exe file
+     */
     pub fn handle_maple_leader_request(&mut self, maple_handler_request: MapleHandlerRequest) -> Result<()> {
         let mut temp_output_file = File::create("input_data_local.csv")?;
 
@@ -19,8 +25,8 @@ impl ClientMapleJuice {
 
         let output = Command::new("python3")
             .arg(maple_handler_request.maple_exe.clone())
-            .arg("input_data_local.csv")
             .arg(maple_handler_request.sql_file)
+            .arg("input_data_local.csv")
             .output()
             .expect("Failed to execute command");
 
@@ -61,7 +67,8 @@ impl ClientMapleJuice {
 
             match ip_addr {
                 Ok(ip) => {
-                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
+                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_LEADER);
+                    println!("HANDLE MAPLE LEADER REQUEST ADDRESS: {}", address_str);
 
                     send_serialized_message(Arc::new(address_str), maple_ack);
                 },

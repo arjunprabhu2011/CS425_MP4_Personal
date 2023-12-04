@@ -127,7 +127,7 @@ impl Client {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND SINGLE GET REQUEST TO REPLICA");
                         }
                     },
                     Err(_) => {
@@ -210,7 +210,7 @@ impl Client {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND SINGLE DELETE REQUEST TO REPLICA");
                         }
                     },
                     Err(_) => {
@@ -343,7 +343,7 @@ impl Client {
                                 }
                             }
                         } else {
-                            println!("Failed to TCP send message");
+                            println!("Failed to TCP send message SEND SINGLE PUT REQUEST TO REPLICA");
                         }
                     },
                     Err(_) => {
@@ -575,7 +575,7 @@ impl Client {
                                     }
                                 }
                             } else {
-                                println!("Failed to TCP send message");
+                                println!("Failed to TCP send message SEND ACK TO LEADER SDFS");
                             }
                         },
                         Err(_) => {

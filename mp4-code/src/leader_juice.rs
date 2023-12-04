@@ -1,7 +1,7 @@
 use crate::leader_mj::LeaderMapleJuice;
 use crate::utils_messages_types::{JuiceRequest, JuiceHandlerRequest, JuiceCompleteAck, MJTask, TaskType, FullTaskCompleteAck, MessageType};
 use crate::utils_funcs::{get_ip_addr, send_serialized_message};
-use crate::utils_consts::MP4_PORT;
+use crate::utils_consts::MP4_PORT_CLIENT;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 use std::cmp::min;
@@ -13,7 +13,13 @@ use std::io::{Write, Result};
 use std::sync::Arc;
 use mp3_code::{handle_put, wait_for_put_ack};
 
+/**
+ * Struct representing the maple juice leader's juice actions
+ */
 impl LeaderMapleJuice {
+    /**
+     * Handle a juice request from a client
+     */
     pub fn handle_juice_request(&mut self, juice_request: JuiceRequest) {
         if let Ok(mut map) = self.machine_to_task_map.lock() {
             map.clear();
@@ -82,7 +88,9 @@ impl LeaderMapleJuice {
             exe_file: juice_request.juice_exe.clone()
         };
 
-        self.current_maplejuice_task = Some(mj_task);
+        if let Ok(mut task) = self.current_maplejuice_task.lock() {
+            *task = Some(mj_task);
+        }
 
         for (k, v) in server_key_map.iter() {
             let juice_handler_request = MessageType::JuiceHandlerRequestType(JuiceHandlerRequest {
@@ -92,6 +100,8 @@ impl LeaderMapleJuice {
                 delete_input: juice_request.delete_input,
                 vec_of_keys: (*v).clone()
             });
+
+            println!("JUICE HANDLER REQUEST: {:?}", juice_handler_request);
 
             match self.machine_to_task_map.lock() {
                 Ok(mut map) => {
@@ -106,12 +116,16 @@ impl LeaderMapleJuice {
 
             let ip_destination = Arc::new((*k).clone());
             
-            let address_str = format!("{}:{}", ip_destination.to_string(), MP4_PORT);
+            let address_str = format!("{}:{}", ip_destination.to_string(), MP4_PORT_CLIENT);
+            println!("HANDLE JUICE REQUEST FROM CLIENT ADDRESS (SEND): {}", address_str);
 
             send_serialized_message(Arc::new(address_str), juice_handler_request.clone());
         }
     }
 
+    /**
+     * Hash partition the keys to various machines
+     */
     fn hash_partition(self, maple_juice_keys_vec: &Vec<String>, num_juice_servers: u16, servers_to_choose_from: &Vec<String>, server_to_key_map: &mut HashMap<String, Vec<String>>) {
         for maple_juice_key in maple_juice_keys_vec.iter() {
             let mut hasher = DefaultHasher::new();
@@ -136,6 +150,9 @@ impl LeaderMapleJuice {
         }
     }
 
+    /**
+     * Partition the keys by range
+     */
     fn range_partition(self, maple_juice_keys_vec: &Vec<String>, num_juice_servers: u16, servers_to_choose_from: &Vec<String>, server_to_key_map: &mut HashMap<String, Vec<String>>) {
         let num_keys = maple_juice_keys_vec.len();
         let partition_size = num_keys / num_juice_servers as usize;
@@ -163,51 +180,60 @@ impl LeaderMapleJuice {
         }
     }
 
+    /**
+     * Handle an ack saying the juice request was completed
+     */
     pub fn handle_juice_complete_ack(&mut self, juice_ack: JuiceCompleteAck) -> Result<()> {
         let mut output_file = OpenOptions::new()
             .write(true)
+            .create(true)
             .append(true) // Set to true to append data to the end of the file
             .open("complete_output.txt")?;
 
         output_file.write_all(&juice_ack.contents_to_output);
         drop(output_file);
 
-        match self.current_maplejuice_task.clone() {
-            Some(mut task) => {
-                if let Some(index) = task.servers_left_to_complete_task.iter().position(|x| x == &juice_ack.domain_name) {
-                    task.servers_left_to_complete_task.remove(index);
-
-                    if task.servers_left_to_complete_task.is_empty() {
-                        handle_put(juice_ack.sdfs_dest_filename, "complete_output.txt".to_string(), (*self.machine_domain_name).clone(), self.sdfs_leader_domain_name.clone());
-                        
-                        wait_for_put_ack(&self.machine_domain_name);
-
-                        fs::remove_file("complete_output.txt");
-                        if let Ok(ip) = get_ip_addr(&task.original_client_domain_name) {
-                            let full_task_complete_ack = MessageType::FullTaskCompleteAckType(FullTaskCompleteAck {
-                                task_type: TaskType::Juice,
-                                exe_file: juice_ack.exe_file
-                            });
-
-                            let address_str = format!("{}:{}", ip.to_string(), MP4_PORT);
-
-                            send_serialized_message(Arc::new(address_str), full_task_complete_ack);
-
-                            if juice_ack.delete_input == 1 {
-                                if let Ok(mut map) = self.sdfs_prefix_to_keys.lock() {
-                                    map.remove(&juice_ack.sdfs_intermediate_prefix);
+        if let Ok(mut mj_task) = self.current_maplejuice_task.lock() {
+            match mj_task.as_mut() {
+                Some(mut task) => {
+                    if let Ok(ip) = get_ip_addr(&juice_ack.domain_name) {
+                        if let Some(index) = task.servers_left_to_complete_task.iter().position(|x| x == &*ip) {
+                            task.servers_left_to_complete_task.remove(index);
+        
+                            if task.servers_left_to_complete_task.is_empty() {
+                                handle_put(juice_ack.sdfs_dest_filename, "complete_output.txt".to_string(), (*self.machine_domain_name).clone(), self.sdfs_leader_domain_name.clone());
+                                
+                                wait_for_put_ack(&self.machine_domain_name);
+        
+                                fs::remove_file("complete_output.txt");
+                                if let Ok(ip) = get_ip_addr(&task.original_client_domain_name) {
+                                    let full_task_complete_ack = MessageType::FullTaskCompleteAckType(FullTaskCompleteAck {
+                                        task_type: TaskType::Juice,
+                                        exe_file: juice_ack.exe_file
+                                    });
+        
+                                    let address_str = format!("{}:{}", ip.to_string(), MP4_PORT_CLIENT);
+        
+                                    println!("HANDLE JUICE ACK SEND TO ORIGINAL CLIENT ADDRESS: {}", address_str);
+        
+                                    send_serialized_message(Arc::new(address_str), full_task_complete_ack);
+        
+                                    if juice_ack.delete_input == 1 {
+                                        if let Ok(mut map) = self.sdfs_prefix_to_keys.lock() {
+                                            map.remove(&juice_ack.sdfs_intermediate_prefix);
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                },
+                None => {
+                    eprintln!("THE CURRENT TASK IS NOT INITIALIZED UPON RECEIPT OF A JUICE ACK");
                 }
-
-                Ok(())
-            },
-            None => {
-                eprintln!("THE CURRENT TASK IS NOT INITIALIZED UPON RECEIPT OF A JUICE ACK");
-                Ok(())
             }
         }
+
+        Ok(())
     }
 }

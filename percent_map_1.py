@@ -24,10 +24,15 @@ def main(sql_file_path, csv_file_path):
             if row['Interconne'] == interconne_type:
                 with open("tester.txt", 'w') as f:
                     f.write("HERREEEEE")
-                    
+                    f.write(csv_file_path)
+                    f.write("HOWDY")
+
                 detection_value = row['Detection_']
                 if detection_value != "":
                     print(f"{detection_value},1")
+                    print("Total,1")
+                else:
+                    print("empty_string,1")
                     print("Total,1")
 
 if __name__ == "__main__":

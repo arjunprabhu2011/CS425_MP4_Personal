@@ -134,6 +134,7 @@ impl LeaderMapleJuice {
         let mut line_number = 0;
     
         for line in reader.lines() {
+            println!("LINEEEEE: {:?}", line);
             line_number += 1;
     
             if line_number >= start_line && line_number <= end_line {

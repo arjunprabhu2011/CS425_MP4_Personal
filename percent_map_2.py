@@ -23,6 +23,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     sql_file_path = sys.argv[1]
-    csv_file_path = sys.argv[2]
+    input_file_path = sys.argv[2]
     main(sql_file_path, input_file_path)
     # main()

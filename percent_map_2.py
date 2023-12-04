@@ -2,14 +2,14 @@ def main(sql_file_path, input_file_path):
     total_count = 0
     with open(csv_file_path, 'r') as file:
         for line in file:
-            if "Total" in "Line":
+            if "Total" in line:
                 parts = text.split(',')
                 # Convert the second part to an integer
                 total_count = int(parts[1])
 
     with open(csv_file_path, 'r') as file:
         for line in file:
-            if "Total" not in "Line":
+            if "Total" not in line:
                 print(f"{line},{total_count}")
 
 # def main():
